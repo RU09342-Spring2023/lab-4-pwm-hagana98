@@ -8,8 +8,6 @@
 
 #include <msp430.h>
 
-unsigned short DutyCycle = 1000;
-
 int main(void)
     {
         WDTCTL = WDTPW | WDTHOLD;   // stop watchdog timer
@@ -28,7 +26,9 @@ int main(void)
 
         TB0CCTL1 |= CCIE;                             // Enable TB0 CCR1 Interrupt
 
-        TB0CCR1 = DutyCycle;                          // Set CCR1 to the value to set the duty cycle
+        TB0CCR1 = 1000;                               // Set CCR1 to 1000
+
+        TB0CCR2 = 1000;                               // Set CCR2 to 1000
 
         __bis_SR_register(LPM3_bits | GIE);           // Enter LPM3, enable interrupts
         __no_operation();                             // For debugger
@@ -36,7 +36,6 @@ int main(void)
         // Disable the GPIO power-on default high-impedance mode to activate
         // previously configured port settings
         PM5CTL0 &= ~LOCKLPM5;
-
     }
 
 // Timer0_B3 Interrupt Vector (TBIV) handler
@@ -57,11 +56,32 @@ void __attribute__ ((interrupt(TIMER0_B1_VECTOR))) TIMER0_B1_ISR (void)
             P1OUT &= ~BIT0;
             break;                               // CCR1 Set the pin to a 0
         case TB0IV_TBCCR2:
-            break;                               // CCR2 not used
+            P6OUT &= ~BIT6;
+            break;                               // CCR2 set the pin to a 0
         case TB0IV_TBIFG:
             P1OUT |= BIT0;                       // overflow Set the pin to a 1
+            P6OUT |= BIT6;
             break;
         default:
             break;
     }
 }
+
+// Button Interrupt
+#pragma vector=PORT2_VECTOR
+__interrupt void Port_2(void){
+    if (TB0CCR1 >= 999)
+        TB0CCR1 = 0;
+    else
+        TB0CCR1 +=100;
+}
+
+#pragma vector=PORT4_VECTOR
+__interrupt void Port_4(void){
+    if (TB0CCR2 >= 999)
+        TB0CCR2 = 0;
+    else
+        TB0CCR2 +=100;
+}
+
+
